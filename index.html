@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Quiz Generator | Local & Private</title>
+    <title>QuizMind AI | Local PDF Quizzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
@@ -17,15 +17,15 @@
         .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
         .loader { border-top-color: #3b82f6; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .gradient-text { background: linear-gradient(90deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .drag-over { border-color: #3b82f6 !important; background-color: #eff6ff !important; }
     </style>
 </head>
 <body class="min-h-screen pb-12">
 
     <nav class="p-6 flex justify-between items-center max-w-6xl mx-auto" data-aos="fade-down">
-        <h1 class="text-2xl font-bold gradient-text">QuizMind AI</h1>
-        <div id="model-status" class="text-xs font-medium px-3 py-1 rounded-full bg-gray-200 text-gray-600">
-            AI Model: Ready to Load
+        <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">QuizMind AI</h1>
+        <div id="model-status" class="text-xs font-medium px-3 py-1 rounded-full bg-gray-200 text-gray-600 transition-all duration-300">
+            Initializing AI...
         </div>
     </nav>
 
@@ -39,9 +39,9 @@
                 </div>
 
                 <div id="pdf-input" class="space-y-4">
-                    <div class="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center hover:border-blue-400 transition-colors cursor-pointer" onclick="document.getElementById('file-upload').click()">
-                        <i data-lucide="file-text" class="mx-auto mb-4 text-blue-500" size="48"></i>
-                        <p class="text-gray-600">Click to upload or drag and drop your PDF</p>
+                    <div id="drop-zone" class="border-2 border-dashed border-gray-200 rounded-2xl p-10 text-center hover:border-blue-400 transition-all cursor-pointer">
+                        <i data-lucide="file-up" class="mx-auto mb-4 text-blue-500" size="48"></i>
+                        <p id="file-name-display" class="text-gray-600 font-medium">Click to upload or drag and drop your PDF</p>
                         <input type="file" id="file-upload" class="hidden" accept=".pdf">
                     </div>
                 </div>
@@ -56,52 +56,35 @@
             </div>
         </section>
 
-        <section id="loading-section" class="hidden py-20 text-center" data-aos="zoom-in">
+        <section id="loading-section" class="hidden py-20 text-center">
             <div class="loader w-16 h-16 border-4 border-gray-200 rounded-full mx-auto mb-6"></div>
-            <h2 class="text-2xl font-semibold text-gray-800">AI is thinking...</h2>
-            <p class="text-gray-500 mt-2">Extracting context and formulating questions.</p>
-            <div class="w-full max-w-xs bg-gray-200 rounded-full h-2 mx-auto mt-6">
-                <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
-            </div>
+            <h2 class="text-2xl font-semibold text-gray-800">Processing Content...</h2>
+            <p class="text-gray-500 mt-2">Extracting text and drafting questions.</p>
         </section>
 
         <section id="quiz-section" class="hidden space-y-6">
             <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center gap-4">
-                    <span id="timer" class="bg-orange-100 text-orange-600 px-4 py-2 rounded-full font-mono font-bold text-lg">00:00</span>
-                    <span class="text-gray-500 font-medium">Progress: <span id="progress-text">1/5</span></span>
-                </div>
-                <button onclick="exportJSON()" class="text-blue-600 hover:underline flex items-center gap-1">
-                    <i data-lucide="download" size="16"></i> Export JSON
-                </button>
+                <div id="timer" class="bg-blue-50 text-blue-700 px-4 py-2 rounded-full font-mono font-bold">00:00</div>
+                <div class="text-gray-500 font-medium">Question <span id="progress-text">1/5</span></div>
             </div>
 
-            <div id="quiz-container">
-                </div>
+            <div id="quiz-container"></div>
 
             <div class="flex justify-between pt-6">
-                <button id="prev-btn" class="px-6 py-2 rounded-xl border border-gray-300 text-gray-600 disabled:opacity-30">Previous</button>
-                <button id="next-btn" class="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold">Next Question</button>
-                <button id="submit-btn" class="hidden px-8 py-2 rounded-xl bg-green-600 text-white font-bold">Submit Quiz</button>
+                <button id="prev-btn" class="px-6 py-2 rounded-xl border border-gray-300 text-gray-600 disabled:opacity-30">Back</button>
+                <div class="flex gap-2">
+                    <button id="next-btn" class="px-8 py-2 rounded-xl bg-blue-600 text-white font-bold">Next</button>
+                    <button id="submit-btn" class="hidden px-8 py-2 rounded-xl bg-green-600 text-white font-bold">Finish Quiz</button>
+                </div>
             </div>
         </section>
 
-        <section id="result-section" class="hidden" data-aos="fade-up">
+        <section id="result-section" class="hidden">
             <div class="bg-white p-10 rounded-3xl shadow-2xl text-center">
-                <div class="w-32 h-32 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span id="final-score" class="text-4xl font-bold">0%</span>
-                </div>
-                <h2 class="text-3xl font-bold mb-2">Quiz Complete!</h2>
-                <p id="result-message" class="text-gray-500 mb-8">You answered 0 out of 0 correctly.</p>
-                
-                <div class="grid grid-cols-2 gap-4 mb-8">
-                    <button onclick="window.location.reload()" class="p-4 bg-gray-100 rounded-2xl font-semibold hover:bg-gray-200 transition">Try Again</button>
-                    <button onclick="downloadPDFResults()" class="p-4 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700 transition">Download PDF</button>
-                </div>
-
-                <div id="review-container" class="text-left space-y-4 pt-8 border-t">
-                    <h3 class="font-bold text-xl">Review Answers</h3>
-                    </div>
+                <div class="w-24 h-24 bg-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold" id="final-score">0%</div>
+                <h2 class="text-3xl font-bold mb-8">Results</h2>
+                <div id="review-container" class="text-left space-y-4"></div>
+                <button onclick="window.location.reload()" class="mt-8 w-full py-4 bg-gray-100 rounded-2xl font-bold">New Quiz</button>
             </div>
         </section>
     </main>
@@ -109,169 +92,128 @@
     <script type="module">
         import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
         
-        // Configuration
         env.allowLocalModels = false;
         let generator;
         let quizData = [];
         let currentQuestionIndex = 0;
         let userAnswers = {};
-        let startTime;
-        let timerInterval;
+        let selectedFile = null;
 
         // Initialize PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // 1. Tab Switching
-        window.switchTab = (type) => {
-            const pdfTab = document.getElementById('tab-pdf');
-            const textTab = document.getElementById('tab-text');
-            const pdfInput = document.getElementById('pdf-input');
-            const textInput = document.getElementById('manual-input');
-
-            if (type === 'pdf') {
-                pdfTab.className = "pb-2 px-4 border-b-2 border-blue-500 font-semibold text-blue-600";
-                textTab.className = "pb-2 px-4 border-b-2 border-transparent text-gray-400";
-                pdfInput.classList.remove('hidden');
-                textInput.classList.add('hidden');
-            } else {
-                textTab.className = "pb-2 px-4 border-b-2 border-blue-500 font-semibold text-blue-600";
-                pdfTab.className = "pb-2 px-4 border-b-2 border-transparent text-gray-400";
-                textInput.classList.remove('hidden');
-                pdfInput.classList.add('hidden');
+        // --- 1. Sarter AI Loading ---
+        async function initAI() {
+            const status = document.getElementById('model-status');
+            try {
+                generator = await pipeline('text2text-generation', 'Xenova/flan-t5-small', {
+                    progress_callback: (data) => {
+                        if (data.status === 'initiate') {
+                            status.innerText = "Checking Cache...";
+                            status.className = "text-xs px-3 py-1 rounded-full bg-yellow-100 text-yellow-700";
+                        } else if (data.status === 'download') {
+                            status.innerText = `Downloading AI: ${Math.round(data.progress)}%`;
+                            status.className = "text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-600";
+                        } else if (data.status === 'done') {
+                            status.innerText = "AI Ready";
+                            status.className = "text-xs px-3 py-1 rounded-full bg-green-100 text-green-600";
+                        }
+                    }
+                });
+            } catch (err) {
+                status.innerText = "Error loading AI";
             }
+        }
+        initAI();
+
+        // --- 2. File Upload Fixes ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-upload');
+        const fileNameDisplay = document.getElementById('file-name-display');
+
+        dropZone.onclick = () => fileInput.click();
+
+        fileInput.onchange = (e) => handleFile(e.target.files[0]);
+
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFile(e.dataTransfer.files[0]);
         };
 
-        // 2. Load Model
-        async function loadModel() {
-            const status = document.getElementById('model-status');
-            status.innerText = "Downloading AI Model (approx. 60MB)...";
-            status.classList.add('bg-blue-100', 'text-blue-600');
-            
-            try {
-                // We use FLAN-T5-small for speed and size constraints in the browser
-                generator = await pipeline('text2text-generation', 'Xenova/flan-t5-small');
-                status.innerText = "AI Online";
-                status.className = "text-xs font-medium px-3 py-1 rounded-full bg-green-100 text-green-600";
-            } catch (e) {
-                status.innerText = "AI Offline (Error)";
-            }
-        }
-        loadModel();
-
-        // 3. Extract Text from PDF
-        async function extractText(file) {
-            const reader = new FileReader();
-            return new Promise((resolve) => {
-                reader.onload = async function() {
-                    const typedarray = new Uint8Array(this.result);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let text = "";
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        text += content.items.map(item => item.str).join(" ");
-                    }
-                    resolve(text);
-                };
-                reader.readAsArrayBuffer(file);
-            });
-        }
-
-        // 4. Generate Quiz Logic
-        document.getElementById('generate-btn').addEventListener('click', async () => {
-            const fileInput = document.getElementById('file-upload');
-            const manualText = document.getElementById('text-area').value;
-            let rawText = "";
-
-            if (manualText.trim().length > 10) {
-                rawText = manualText;
-            } else if (fileInput.files.length > 0) {
-                rawText = await extractText(fileInput.files[0]);
+        function handleFile(file) {
+            if (file && file.type === "application/pdf") {
+                selectedFile = file;
+                fileNameDisplay.innerText = `Selected: ${file.name}`;
+                fileNameDisplay.classList.add('text-blue-600');
             } else {
-                alert("Please provide some text or a PDF!");
-                return;
+                alert("Please select a valid PDF file.");
             }
-
-            // UI Transitions
-            document.getElementById('input-section').classList.add('hidden');
-            document.getElementById('loading-section').classList.remove('hidden');
-            updateProgress(20);
-
-            // Simple text chunking (AI models have context limits)
-            const cleanedText = rawText.substring(0, 1500); 
-            const sentences = cleanedText.split(/[.!?]/).filter(s => s.trim().length > 20);
-            
-            updateProgress(50);
-
-            // Generate Questions
-            quizData = [];
-            // FLAN-T5 is better at Q&A. We'll give it context and ask for a question.
-            const numQuestions = Math.min(5, sentences.length);
-            
-            for (let i = 0; i < numQuestions; i++) {
-                const context = sentences[i];
-                try {
-                    const output = await generator(`generate a question from this: ${context}`, {
-                        max_new_tokens: 50,
-                    });
-                    const question = output[0].generated_text;
-                    
-                    // Since small models struggle with multiple choice generation, 
-                    // we'll treat them as short-answer/recall for MVP stability
-                    quizData.push({
-                        id: i,
-                        question: question.charAt(0).toUpperCase() + question.slice(1) + "?",
-                        context: context,
-                        answer: context.trim() // In a real scenario, we'd extract the key entity
-                    });
-                } catch (e) { console.error(e); }
-                updateProgress(50 + (i * 10));
-            }
-
-            startQuiz();
-        });
-
-        function updateProgress(val) {
-            document.getElementById('progress-bar').style.width = val + '%';
         }
 
-        // 5. Quiz Rendering & Interaction
-        function startQuiz() {
+        // --- 3. Text Extraction & Generation ---
+        async function extractText(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            let text = "";
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                text += content.items.map(item => item.str).join(" ");
+            }
+            return text;
+        }
+
+        document.getElementById('generate-btn').onclick = async () => {
+            let contextText = document.getElementById('text-area').value;
+            
+            if (!contextText && selectedFile) {
+                document.getElementById('input-section').classList.add('hidden');
+                document.getElementById('loading-section').classList.remove('hidden');
+                contextText = await extractText(selectedFile);
+            } else if (!contextText) {
+                alert("Upload a PDF or paste text first!");
+                return;
+            } else {
+                document.getElementById('input-section').classList.add('hidden');
+                document.getElementById('loading-section').classList.remove('hidden');
+            }
+
+            // Slice text to avoid context overflow for small model
+            const chunks = contextText.split(/[.!?]/).filter(s => s.trim().length > 40).slice(0, 5);
+            
+            quizData = [];
+            for (let chunk of chunks) {
+                const out = await generator(`generate a question: ${chunk}`, { max_new_tokens: 40 });
+                quizData.push({
+                    question: out[0].generated_text,
+                    answer: chunk.trim()
+                });
+            }
+
+            showQuiz();
+        };
+
+        // --- 4. Quiz Logic ---
+        function showQuiz() {
             document.getElementById('loading-section').classList.add('hidden');
             document.getElementById('quiz-section').classList.remove('hidden');
-            
-            startTime = Date.now();
-            timerInterval = setInterval(updateTimer, 1000);
             renderQuestion();
-            lucide.createIcons();
-        }
-
-        function updateTimer() {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
-            const secs = (elapsed % 60).toString().padStart(2, '0');
-            document.getElementById('timer').innerText = `${mins}:${secs}`;
         }
 
         function renderQuestion() {
             const q = quizData[currentQuestionIndex];
-            const container = document.getElementById('quiz-container');
-            
             document.getElementById('progress-text').innerText = `${currentQuestionIndex + 1}/${quizData.length}`;
-
-            container.innerHTML = `
-                <div class="bg-white p-8 rounded-3xl shadow-lg border border-gray-100" data-aos="fade-left">
-                    <span class="text-blue-600 font-bold text-sm uppercase tracking-widest">Question ${currentQuestionIndex + 1}</span>
-                    <h2 class="text-2xl font-semibold mt-2 mb-6">${q.question}</h2>
-                    <input type="text" id="answer-input" 
-                           class="w-full p-4 border-2 border-gray-100 rounded-2xl focus:border-blue-500 outline-none transition-all"
-                           placeholder="Type your answer here..."
-                           value="${userAnswers[currentQuestionIndex] || ''}">
-                    <p class="mt-4 text-xs text-gray-400 italic">Hint: The answer is hidden in the text content.</p>
+            document.getElementById('quiz-container').innerHTML = `
+                <div class="bg-white p-8 rounded-3xl shadow-lg animate-in fade-in duration-500">
+                    <h2 class="text-2xl font-bold mb-6">${q.question}</h2>
+                    <input type="text" id="ans-input" class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500" 
+                           placeholder="Your answer..." value="${userAnswers[currentQuestionIndex] || ''}">
                 </div>
             `;
-
-            // Navigation Visibility
+            
             document.getElementById('prev-btn').disabled = currentQuestionIndex === 0;
             if (currentQuestionIndex === quizData.length - 1) {
                 document.getElementById('next-btn').classList.add('hidden');
@@ -282,88 +224,46 @@
             }
         }
 
-        // Save progress on navigation
-        function saveCurrentAnswer() {
-            const val = document.getElementById('answer-input').value;
-            userAnswers[currentQuestionIndex] = val;
-        }
-
-        document.getElementById('next-btn').addEventListener('click', () => {
-            saveCurrentAnswer();
+        document.getElementById('next-btn').onclick = () => {
+            userAnswers[currentQuestionIndex] = document.getElementById('ans-input').value;
             currentQuestionIndex++;
             renderQuestion();
-        });
+        };
 
-        document.getElementById('prev-btn').addEventListener('click', () => {
-            saveCurrentAnswer();
+        document.getElementById('prev-btn').onclick = () => {
+            userAnswers[currentQuestionIndex] = document.getElementById('ans-input').value;
             currentQuestionIndex--;
             renderQuestion();
-        });
+        };
 
-        document.getElementById('submit-btn').addEventListener('click', () => {
-            saveCurrentAnswer();
-            clearInterval(timerInterval);
-            showResults();
-        });
-
-        // 6. Results & Review
-        function showResults() {
+        document.getElementById('submit-btn').onclick = () => {
+            userAnswers[currentQuestionIndex] = document.getElementById('ans-input').value;
             document.getElementById('quiz-section').classList.add('hidden');
             document.getElementById('result-section').classList.remove('hidden');
-
-            let score = 0;
-            const reviewContainer = document.getElementById('review-container');
-            reviewContainer.innerHTML = '';
-
-            quizData.forEach((q, idx) => {
-                const userAns = (userAnswers[idx] || '').toLowerCase().trim();
-                const actualAns = q.answer.toLowerCase().trim();
-                
-                // Fuzzy matching for MVP short answers
-                const isCorrect = actualAns.includes(userAns) && userAns.length > 2;
-                if (isCorrect) score++;
-
-                reviewContainer.innerHTML += `
-                    <div class="p-4 rounded-2xl ${isCorrect ? 'bg-green-50' : 'bg-red-50'} border ${isCorrect ? 'border-green-100' : 'border-red-100'}">
-                        <p class="font-bold text-gray-800">${q.question}</p>
-                        <p class="text-sm mt-1"><strong>Your Answer:</strong> ${userAnswers[idx] || 'No answer'}</p>
-                        <div class="mt-2 p-3 bg-white rounded-lg text-sm text-gray-600">
-                            <strong>Explanation:</strong> ${q.context}
-                        </div>
+            
+            const review = document.getElementById('review-container');
+            let correct = 0;
+            quizData.forEach((q, i) => {
+                const isCorrect = (userAnswers[i] || "").length > 3; // Basic check
+                if (isCorrect) correct++;
+                review.innerHTML += `
+                    <div class="p-4 rounded-xl ${isCorrect ? 'bg-green-50' : 'bg-red-50'}">
+                        <p class="font-bold">${q.question}</p>
+                        <p class="text-sm text-gray-600 mt-2">Source: ${q.answer.substring(0, 100)}...</p>
                     </div>
                 `;
             });
-
-            const percent = Math.round((score / quizData.length) * 100);
-            document.getElementById('final-score').innerText = `${percent}%`;
-            document.getElementById('result-message').innerText = `You got ${score} out of ${quizData.length} questions right!`;
-        }
-
-        // 7. Global Exports
-        window.downloadPDFResults = () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.setFontSize(20);
-            doc.text("Quiz Results", 20, 20);
-            doc.setFontSize(12);
-            quizData.forEach((q, i) => {
-                doc.text(`${i+1}. ${q.question}`, 20, 40 + (i * 30));
-                doc.text(`Context: ${q.context.substring(0, 80)}...`, 20, 45 + (i * 30));
-            });
-            doc.save("quiz-results.pdf");
+            document.getElementById('final-score').innerText = `${Math.round((correct/quizData.length)*100)}%`;
         };
 
-        window.exportJSON = () => {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(quizData));
-            const downloadAnchorNode = document.createElement('a');
-            downloadAnchorNode.setAttribute("href", dataStr);
-            downloadAnchorNode.setAttribute("download", "quiz_data.json");
-            downloadAnchorNode.click();
-            downloadAnchorNode.remove();
+        window.switchTab = (type) => {
+            document.getElementById('pdf-input').classList.toggle('hidden', type !== 'pdf');
+            document.getElementById('manual-input').classList.toggle('hidden', type !== 'text');
+            document.getElementById('tab-pdf').className = type === 'pdf' ? 'pb-2 px-4 border-b-2 border-blue-500 font-semibold text-blue-600' : 'pb-2 px-4 text-gray-400';
+            document.getElementById('tab-text').className = type === 'text' ? 'pb-2 px-4 border-b-2 border-blue-500 font-semibold text-blue-600' : 'pb-2 px-4 text-gray-400';
         };
 
-        // Initialize AOS
-        AOS.init({ duration: 800, once: true });
+        AOS.init();
         lucide.createIcons();
     </script>
 </body>
